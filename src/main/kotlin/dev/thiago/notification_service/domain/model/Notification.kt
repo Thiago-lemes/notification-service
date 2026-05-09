@@ -1,0 +1,12 @@
+package dev.thiago.notification_service.domain.model
+
+import java.util.UUID
+
+data class Notification(
+    val id: UUID = UUID.randomUUID(),
+    val tenantId: UUID,
+    val templateId: UUID?,
+    val groupId: UUID?,
+    val payload: Map<String, Any>,
+    val status: String = "PENDING"
+)
