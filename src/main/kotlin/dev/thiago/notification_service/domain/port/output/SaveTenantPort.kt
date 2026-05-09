@@ -2,6 +2,6 @@ package dev.thiago.notification_service.domain.port.output
 
 import dev.thiago.notification_service.domain.model.Tenant
 
-interface SaveTenantPort {
+fun interface SaveTenantPort {
     fun save(tenant: Tenant): Tenant
 }
