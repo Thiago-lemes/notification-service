@@ -18,6 +18,7 @@ spring:
   mail:
     host: localhost
     port: 1025
+    username: noreply@notification-service.dev
     properties:
       mail:
         smtp:

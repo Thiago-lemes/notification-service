@@ -1,8 +1,8 @@
 package dev.thiago.notification_service.infrastructure.web.controller
 
 import dev.thiago.notification_service.domain.port.input.CreateTenantUseCase
-import dev.thiago.notification_service.infrastructure.web.dto.CreateTenantRequest
-import dev.thiago.notification_service.infrastructure.web.dto.CreateTenantResponse
+import dev.thiago.notification_service.infrastructure.web.dto.request.CreateTenantRequest
+import dev.thiago.notification_service.infrastructure.web.dto.response.CreateTenantResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity

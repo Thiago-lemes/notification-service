@@ -1,4 +1,4 @@
-package dev.thiago.notification_service.infrastructure.web.dto
+package dev.thiago.notification_service.infrastructure.web.dto.request
 
 data class NotificationRequest(
     val templateId: String?,

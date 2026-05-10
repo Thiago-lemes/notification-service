@@ -1,4 +1,4 @@
-package dev.thiago.notification_service.infrastructure.web.dto
+package dev.thiago.notification_service.infrastructure.web.dto.response
 
 import java.util.UUID
 

@@ -4,6 +4,7 @@ import dev.thiago.notification_service.domain.model.Tenant
 import dev.thiago.notification_service.domain.port.output.SaveTenantPort
 import dev.thiago.notification_service.domain.port.output.TenantRepository
 import org.springframework.stereotype.Component
+import java.util.UUID
 
 @Component
 class TenantRepositoryAdapter(
@@ -17,6 +18,10 @@ class TenantRepositoryAdapter(
     override fun save(tenant: Tenant): Tenant {
         jpaRepository.save(tenant.toEntity())
         return tenant
+    }
+
+    override fun findById(id: UUID): Tenant? {
+        return jpaRepository.findById(id).orElse(null)?.toDomain()
     }
 
     private fun TenantJpaEntity.toDomain() = Tenant(

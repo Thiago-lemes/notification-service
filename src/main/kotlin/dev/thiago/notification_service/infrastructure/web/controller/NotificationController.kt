@@ -3,8 +3,8 @@ package dev.thiago.notification_service.infrastructure.web.controller
 import dev.thiago.notification_service.domain.port.input.FindNotificationUseCase
 import dev.thiago.notification_service.domain.port.input.SendNotificationRequest
 import dev.thiago.notification_service.domain.port.input.SendNotificationUseCase
-import dev.thiago.notification_service.infrastructure.web.dto.NotificationRequest
-import dev.thiago.notification_service.infrastructure.web.dto.NotificationResponse
+import dev.thiago.notification_service.infrastructure.web.dto.request.NotificationRequest
+import dev.thiago.notification_service.infrastructure.web.dto.response.NotificationResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
