@@ -5,7 +5,7 @@ import dev.thiago.notification_service.domain.port.output.AddGroupMemberPort
 import dev.thiago.notification_service.domain.port.output.FindGroupPort
 import dev.thiago.notification_service.domain.port.output.FindRecipientsByTenantPort
 import org.springframework.stereotype.Service
-import java.util.*
+import java.util.UUID
 
 @Service
 class AddGroupMemberService(
@@ -20,7 +20,9 @@ class AddGroupMemberService(
 
         val recipients = findRecipients.findByTenantId(group.tenantId)
         val recipientExists = recipients.any { it.id == recipientId }
-        require(!recipientExists)
+
+        require(recipientExists) { "Recipient $recipientId not found in tenant" }
+
         addGroupMember.add(groupId, recipientId)
     }
 }

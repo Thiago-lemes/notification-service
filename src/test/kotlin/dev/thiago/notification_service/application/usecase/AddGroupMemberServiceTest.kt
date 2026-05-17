@@ -9,9 +9,9 @@ import io.mockk.every
 import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.Assertions.assertEquals
 import java.util.UUID
 
 class AddGroupMemberServiceTest {
@@ -63,16 +63,17 @@ class AddGroupMemberServiceTest {
         // ARRANGE
         val group = buildGroup()
         val recipientFromAnotherTenant = buildRecipient(tenantId = UUID.randomUUID())
+        val unknownRecipientId = UUID.randomUUID()
 
         every { findGroup.findById(group.id) } returns group
         every { findRecipients.findByTenantId(group.tenantId) } returns listOf(recipientFromAnotherTenant)
 
         // ACT + ASSERT
         val exception = assertThrows<IllegalArgumentException> {
-            service.add(groupId = group.id, recipientId = UUID.randomUUID())
+            service.add(groupId = group.id, recipientId = unknownRecipientId)
         }
 
-        assertEquals("Recipient ${exception.message?.substringAfter("Recipient ")?.substringBefore(" not")} not found in tenant", exception.message)
+        assertEquals("Recipient $unknownRecipientId not found in tenant", exception.message)
         verify(exactly = 0) { addGroupMember.add(any(), any()) }
     }
 
@@ -108,7 +109,7 @@ class AddGroupMemberServiceTest {
         // ACT
         service.add(groupId = group.id, recipientId = recipient2.id)
 
-        // ASSERT — adiciona exatamente o recipient2, não os outros
+        // ASSERT
         verify(exactly = 1) { addGroupMember.add(group.id, recipient2.id) }
         verify(exactly = 0) { addGroupMember.add(group.id, recipient1.id) }
         verify(exactly = 0) { addGroupMember.add(group.id, recipient3.id) }
