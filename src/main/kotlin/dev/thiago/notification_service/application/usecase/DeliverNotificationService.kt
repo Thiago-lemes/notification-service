@@ -2,14 +2,17 @@ package dev.thiago.notification_service.application.usecase
 
 import dev.thiago.notification_service.domain.model.NotificationDelivery
 import dev.thiago.notification_service.domain.model.NotificationEvent
+import dev.thiago.notification_service.domain.model.Recipient
 import dev.thiago.notification_service.domain.port.output.*
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.util.UUID
 
 @Service
 class DeliverNotificationService(
     private val findNotification: FindNotificationPort,
     private val findRecipients: FindRecipientsByTenantPort,
+    private val findRecipientsByGroup: FindRecipientsByGroupPort,
     private val saveDelivery: SaveDeliveryPort,
     private val channels: List<NotificationChannelPort>
 ) {
@@ -20,7 +23,12 @@ class DeliverNotificationService(
         val notification = findNotification.findById(event.notificationId)
             ?: throw IllegalArgumentException("Notification ${event.notificationId} not found")
 
-        val recipients = findRecipients.findByTenantId(notification.tenantId)
+        val recipients = resolveRecipients(notification.groupId, notification.tenantId)
+
+        if (recipients.isEmpty()) {
+            log.warn("Nenhum destinatário encontrado para notificação ${notification.id}")
+            return
+        }
 
         recipients.forEach { recipient ->
             recipient.channelPreferences.forEach { channelName ->
@@ -53,6 +61,16 @@ class DeliverNotificationService(
                     log.error("Falha ao entregar via $channelName para ${recipient.name}: ${e.message}")
                 }
             }
+        }
+    }
+
+    private fun resolveRecipients(groupId: UUID?, tenantId: UUID): List<Recipient> {
+        return if (groupId != null) {
+            log.info("Buscando recipients do grupo $groupId")
+            findRecipientsByGroup.findByGroupId(groupId)
+        } else {
+            log.info("Buscando todos os recipients do tenant $tenantId")
+            findRecipients.findByTenantId(tenantId)
         }
     }
 }

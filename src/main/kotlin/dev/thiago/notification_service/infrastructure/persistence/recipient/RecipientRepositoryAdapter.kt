@@ -1,6 +1,7 @@
 package dev.thiago.notification_service.infrastructure.persistence.recipient
 
 import dev.thiago.notification_service.domain.model.Recipient
+import dev.thiago.notification_service.domain.port.output.FindRecipientsByGroupPort
 import dev.thiago.notification_service.domain.port.output.FindRecipientsByTenantPort
 import dev.thiago.notification_service.domain.port.output.SaveRecipientPort
 import org.springframework.stereotype.Component
@@ -9,7 +10,7 @@ import java.util.UUID
 @Component
 class RecipientRepositoryAdapter(
     private val jpaRepository: RecipientJpaRepository
-) : FindRecipientsByTenantPort, SaveRecipientPort {
+) : FindRecipientsByTenantPort, SaveRecipientPort, FindRecipientsByGroupPort {
 
     override fun findByTenantId(tenantId: UUID): List<Recipient> {
         return jpaRepository.findByTenantId(tenantId).map { it.toDomain() }
@@ -18,6 +19,10 @@ class RecipientRepositoryAdapter(
     override fun save(recipient: Recipient): Recipient {
         jpaRepository.save(recipient.toEntity())
         return recipient
+    }
+
+    override fun findByGroupId(groupId: UUID): List<Recipient> {
+        return jpaRepository.findByGroupId(groupId).map { it.toDomain() }
     }
 
     private fun RecipientJpaEntity.toDomain() = Recipient(

@@ -4,6 +4,7 @@ import dev.thiago.notification_service.domain.model.Notification
 import dev.thiago.notification_service.domain.model.NotificationEvent
 import dev.thiago.notification_service.domain.model.Recipient
 import dev.thiago.notification_service.domain.port.output.FindNotificationPort
+import dev.thiago.notification_service.domain.port.output.FindRecipientsByGroupPort
 import dev.thiago.notification_service.domain.port.output.FindRecipientsByTenantPort
 import dev.thiago.notification_service.domain.port.output.NotificationChannelPort
 import dev.thiago.notification_service.domain.port.output.SaveDeliveryPort
@@ -23,9 +24,12 @@ class DeliverNotificationServiceTest {
     private val emailChannel = mockk<NotificationChannelPort>()
     private val whatsappChannel = mockk<NotificationChannelPort>()
 
+    private val findRecipientsByGroup = mockk<FindRecipientsByGroupPort>()
+
     private val service = DeliverNotificationService(
         findNotification = findNotification,
         findRecipients = findRecipients,
+        findRecipientsByGroup = findRecipientsByGroup,
         saveDelivery = saveDelivery,
         channels = listOf(emailChannel, whatsappChannel)
     )
@@ -181,12 +185,55 @@ class DeliverNotificationServiceTest {
         verify(exactly = 2) { emailChannel.deliver(any(), notification.payload) }
     }
 
+    @Test
+    fun `should deliver to group recipients when groupId is present`() {
+        // ARRANGE
+        val notification = buildNotification(groupId = UUID.randomUUID())
+        val recipient = buildRecipient(channelPreferences = listOf("EMAIL"))
+        val event = buildEvent(notification)
+
+        every { findNotification.findById(notification.id) } returns notification
+        every { findRecipientsByGroup.findByGroupId(notification.groupId!!) } returns listOf(recipient)
+        every { saveDelivery.save(any()) } answers { firstArg() }
+        every { emailChannel.supports("EMAIL") } returns true
+        justRun { emailChannel.deliver(any(), any()) }
+
+        // ACT
+        service.deliver(event)
+
+        // ASSERT — busca por grupo, não por tenant
+        verify(exactly = 1) { findRecipientsByGroup.findByGroupId(notification.groupId!!) }
+        verify(exactly = 0) { findRecipients.findByTenantId(any()) }
+        verify(exactly = 1) { emailChannel.deliver(recipient, notification.payload) }
+    }
+
+    @Test
+    fun `should deliver to all tenant recipients when groupId is null`() {
+        // ARRANGE
+        val notification = buildNotification(groupId = null)
+        val recipient = buildRecipient(channelPreferences = listOf("EMAIL"))
+        val event = buildEvent(notification)
+
+        every { findNotification.findById(notification.id) } returns notification
+        every { findRecipients.findByTenantId(notification.tenantId) } returns listOf(recipient)
+        every { saveDelivery.save(any()) } answers { firstArg() }
+        every { emailChannel.supports("EMAIL") } returns true
+        justRun { emailChannel.deliver(any(), any()) }
+
+        // ACT
+        service.deliver(event)
+
+        // ASSERT — busca por tenant, não por grupo
+        verify(exactly = 1) { findRecipients.findByTenantId(notification.tenantId) }
+        verify(exactly = 0) { findRecipientsByGroup.findByGroupId(any()) }
+    }
+
     // helpers
-    private fun buildNotification() = Notification(
+    private fun buildNotification(groupId: UUID? = null) = Notification(
         id = UUID.randomUUID(),
         tenantId = UUID.randomUUID(),
         templateId = null,
-        groupId = null,
+        groupId = groupId,
         payload = mapOf("message" to "Amanhã não haverá aula", "subject" to "Aviso")
     )
 
