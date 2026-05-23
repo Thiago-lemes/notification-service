@@ -120,6 +120,11 @@
 			<version>1.14.2</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.twilio.sdk</groupId>
+			<artifactId>twilio</artifactId>
+			<version>10.7.2</version>
+		</dependency>
 	</dependencies>
 
 	<build>
