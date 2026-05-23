@@ -30,6 +30,8 @@ class DeliverNotificationService(
             return
         }
 
+        var hasFailure = false
+
         recipients.forEach { recipient ->
             recipient.channelPreferences.forEach { channelName ->
                 val channel = channels.find { it.supports(channelName) }
@@ -53,14 +55,21 @@ class DeliverNotificationService(
                     saveDelivery.save(saved.copy(status = "DELIVERED", attemptCount = 1))
                     log.info("Entregue via $channelName para ${recipient.name}")
                 } catch (e: Exception) {
-                    saveDelivery.save(saved.copy(
-                        status = "FAILED",
-                        attemptCount = 1,
-                        errorMessage = e.message
-                    ))
+                    saveDelivery.save(
+                        saved.copy(
+                            status = "FAILED",
+                            attemptCount = 1,
+                            errorMessage = e.message
+                        )
+                    )
                     log.error("Falha ao entregar via $channelName para ${recipient.name}: ${e.message}")
+                    hasFailure = true
                 }
             }
+        }
+
+        if (hasFailure) {
+            throw RuntimeException("One or more deliveries failed — triggering retry")
         }
     }
 
