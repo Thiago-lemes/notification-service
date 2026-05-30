@@ -2,22 +2,23 @@
 
 > Microserviço de notificações assíncronas construído com Kotlin, Spring Boot e RabbitMQ.
 
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2-blue?logo=kotlin)](https://kotlinlang.org)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0-green?logo=springboot)](https://spring.io/projects/spring-boot)
+[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.13-orange?logo=rabbitmq)](https://www.rabbitmq.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?logo=postgresql)](https://www.postgresql.org)
+
 ---
 
 ## O que é esse projeto
 
-Notification Service é um microserviço que recebe eventos de notificação de sistemas externos e entrega mensagens de
-forma confiável em múltiplos canais — Email, WhatsApp e Webhooks — usando arquitetura orientada a eventos.
+Notification Service é um microserviço que recebe eventos de notificação de sistemas externos e entrega mensagens de forma confiável em múltiplos canais — **Email**, **WhatsApp** e **Webhooks** — usando arquitetura orientada a eventos.
 
-Qualquer sistema envia um único `POST /notifications`. O serviço cuida de encontrar os destinatários certos, selecionar
-o canal correto para cada um, e tratar falhas com reenvio automático.
+Qualquer sistema envia um único `POST /notifications`. O serviço cuida de encontrar os destinatários certos, aplicar o template correto, selecionar o canal adequado para cada um, e tratar falhas com reenvio automático.
 
-**Exemplo real:** uma escola precisa avisar todos os pais que amanhã não haverá aula. O sistema da escola manda um único
-evento. O Notification Service entrega o aviso via WhatsApp para quem prefere WhatsApp, e via email para quem prefere
-email — automaticamente.
+**Exemplo real:** uma escola precisa avisar todos os pais da Turma 3A que amanhã não haverá aula. O sistema da escola manda um único evento com o templateId e o groupId. O Notification Service aplica o template, e entrega o aviso via WhatsApp para quem prefere WhatsApp e via email para quem prefere email — automaticamente, para todos os membros do grupo.
 
 ```
-Sistema externo (escola, NGO, e-commerce...)
+Sistema externo (escola, NGO, cantina, e-commerce...)
               │
               ▼
     POST /notifications
@@ -26,7 +27,7 @@ Sistema externo (escola, NGO, e-commerce...)
        Fila RabbitMQ
               │
               ├──▶ Email   (Mailhog / SMTP)
-              ├──▶ WhatsApp (Evolution API)
+              ├──▶ WhatsApp (Twilio)
               └──▶ Webhook  (HTTP callbacks)
 ```
 
@@ -35,185 +36,96 @@ Sistema externo (escola, NGO, e-commerce...)
 ## Funcionalidades
 
 - **Multi-tenant** — cada cliente tem sua própria API key e dados isolados
+- **Templates com variáveis** — templates reutilizáveis com interpolação `{{variavel}}`
 - **Grupos de destinatários** — envie para um grupo e o serviço resolve todos os membros
 - **Preferências por canal** — cada destinatário escolhe como quer ser notificado
 - **Entrega assíncrona** — resposta `202 Accepted` imediata, entrega acontece em background
-- **Idempotência** — header `Idempotency-Key` previne notificações duplicadas
-- **Dead-letter queue** — mensagens com falha são preservadas para investigação
-- **Rastreamento de entregas** — cada tentativa de entrega é persistida com status e detalhes de erro
+- **Retry com backoff exponencial** — 5 tentativas com delays crescentes (2s, 4s, 8s, 16s, 32s)
+- **Dead-letter queue** — mensagens que esgotaram tentativas são preservadas para investigação
+- **Reprocessamento da DLQ** — endpoint administrativo para reprocessar mensagens com falha
+- **Rastreamento de entregas** — cada tentativa é persistida com status e detalhes de erro
 
 ---
 
 ## Tecnologias
 
-| Camada         | Tecnologia      |
-|----------------|-----------------|
-| Linguagem      | Kotlin          |
-| Framework      | Spring Boot 4.x |
-| Message Broker | RabbitMQ        |
-| Banco de dados | PostgreSQL      |
-| Migrations     | Flyway          |
-| Email (local)  | Mailhog         |
-| WhatsApp       | Evolution API   |
-| Infraestrutura | Docker Compose  |
+| Camada | Tecnologia |
+|---|---|
+| Linguagem | Kotlin 2.2 |
+| Framework | Spring Boot 4.0 |
+| Message Broker | RabbitMQ 3.13 |
+| Banco de dados | PostgreSQL 16 |
+| Migrations | Flyway |
+| Email (local) | Mailhog |
+| WhatsApp | Twilio WhatsApp Sandbox |
+| Testes | JUnit 5 + MockK |
+| Infraestrutura | Docker Compose |
 
 ---
 
 ## Arquitetura
 
-Este projeto segue a **Arquitetura Hexagonal**, também conhecida como *Ports and Adapters*. É um padrão arquitetural que
-mantém as regras de negócio completamente isoladas de detalhes externos como banco de dados, HTTP e mensageria.
-
-### O problema que ela resolve
-
-Em arquiteturas tradicionais em camadas, o código de negócio frequentemente depende diretamente de frameworks e
-infraestrutura:
-
-```
-Controller → Service → Repository (JPA) → Banco
-```
-
-Isso cria um problema: se você quiser trocar o banco de dados, reescrever uma lógica de negócio, ou escrever testes
-unitários sem subir o Spring, vai encontrar resistência. O negócio está acoplado à infraestrutura.
-
-A Arquitetura Hexagonal inverte essa dependência.
+Este projeto segue a **Arquitetura Hexagonal** (Ports and Adapters), mantendo as regras de negócio completamente isoladas de detalhes externos como banco de dados, HTTP e mensageria.
 
 ### O princípio central
 
 **O domínio não depende de nada. Todo o resto depende do domínio.**
 
 ```
-Infraestrutura (JPA, RabbitMQ, HTTP, Email)
+Infraestrutura (JPA, RabbitMQ, HTTP, Email, Twilio)
           │
           │ depende de
           ▼
       Domínio (regras de negócio)
 ```
 
-O domínio não sabe que existe Spring. Não sabe que existe PostgreSQL. Não sabe que existe RabbitMQ. Ele só conhece suas
-próprias regras e contratos.
-
 ### As três camadas
 
-#### 1. Domínio
-
-O coração da aplicação. Contém os modelos de negócio e as interfaces que definem o que o domínio precisa do mundo
-externo.
+**Domínio** — modelos e interfaces (portas), sem dependências de framework.
 
 ```
 domain/
-├── model/          ← data classes puras, sem anotações de framework
-│   ├── Notification.kt
-│   ├── Recipient.kt
-│   ├── Tenant.kt
-│   └── NotificationDelivery.kt
-└── port/
-    ├── input/      ← o que a aplicação é capaz de fazer (casos de uso)
-    │   ├── SendNotificationUseCase.kt
-    │   └── SendNotificationRequest.kt
-    └── output/     ← o que a aplicação precisa do mundo externo
-        ├── SaveNotificationPort.kt
-        ├── FindNotificationPort.kt
-        ├── TenantRepository.kt
-        └── NotificationChannelPort.kt
+├── model/          ← data classes puras
+├── port/
+│   ├── input/      ← casos de uso (interfaces)
+│   └── output/     ← repositórios e canais (interfaces)
+└── service/        ← lógica de domínio (TemplateRenderer)
 ```
 
-Os modelos de domínio são classes Kotlin puras — sem `@Entity`, sem `@Column`, sem nenhuma anotação de framework:
-
-```kotlin
-// Modelo de domínio puro — não sabe que existe JPA
-data class Notification(
-    val id: UUID = UUID.randomUUID(),
-    val tenantId: UUID,
-    val payload: Map<String, Any>,
-    val status: String = "PENDING"
-)
-```
-
-#### 2. Aplicação
-
-Implementa os casos de uso. Orquestra os modelos de domínio e chama as portas de saída. Não sabe nada sobre HTTP ou
-JPA — só conhece interfaces.
+**Aplicação** — implementa os casos de uso. Orquestra o domínio, não conhece JPA nem HTTP.
 
 ```
-application/
-└── usecase/
-    ├── SendNotificationService.kt    ← orquestra o POST /notifications
-    └── DeliverNotificationService.kt ← orquestra o consumo da fila
+application/usecase/
+├── SendNotificationService.kt
+├── DeliverNotificationService.kt
+├── CreateTenantService.kt
+├── CreateRecipientService.kt
+├── CreateGroupService.kt
+├── AddGroupMemberService.kt
+├── CreateTemplateService.kt
+└── FindNotificationService.kt
 ```
 
-#### 3. Infraestrutura
-
-O mundo externo. Implementa as portas definidas pelo domínio usando tecnologia real: Spring Data JPA, RabbitMQ,
-JavaMailSender.
+**Infraestrutura** — adapters que implementam as portas usando tecnologia real.
 
 ```
 infrastructure/
-├── persistence/    ← entidades JPA e adapters de repositório
-├── messaging/      ← configuração RabbitMQ, publisher e consumer
+├── persistence/    ← JPA entities e repository adapters
+├── messaging/      ← RabbitMQ config, publisher, consumer
 ├── channel/        ← EmailChannel, WhatsAppChannel
 └── web/
-    ├── controller/ ← controllers REST
-    └── dto/        ← objetos de request e response
+    ├── controller/ ← REST controllers
+    └── dto/        ← request/response bodies
 ```
-
-### Portas e Adapters na prática
-
-**Porta** é uma interface que vive no domínio. Ela declara um contrato sem saber como será implementado.
-
-**Adapter** é a implementação dessa interface na camada de infraestrutura.
-
-Exemplo completo do fluxo de persistência:
-
-```kotlin
-// 1. PORTA — domínio declara o contrato (domain/port/output/)
-interface SaveNotificationPort {
-    fun save(notification: Notification): Notification
-}
-
-// 2. ADAPTER — infraestrutura implementa o contrato (infrastructure/persistence/)
-@Component
-class NotificationRepositoryAdapter(
-    private val jpaRepository: NotificationJpaRepository
-) : SaveNotificationPort {
-    override fun save(notification: Notification): Notification {
-        jpaRepository.save(notification.toEntity())
-        return notification
-    }
-}
-
-// 3. CASO DE USO — só conhece a interface, nunca a implementação (application/usecase/)
-@Service
-class SendNotificationService(
-    private val saveNotification: SaveNotificationPort  // ← interface, não JPA
-) : SendNotificationUseCase {
-    override fun send(apiKey: String, request: SendNotificationRequest): Notification {
-        // lógica de negócio aqui
-        return saveNotification.save(notification)
-    }
-}
-```
-
-O Spring resolve a implementação em tempo de execução via injeção de dependência. O `SendNotificationService` nunca viu
-um `@Repository` na vida.
-
-### Por que isso importa
-
-| Benefício                  | Como aparece neste projeto                                                                        |
-|----------------------------|---------------------------------------------------------------------------------------------------|
-| **Testabilidade**          | `SendNotificationService` pode ser testado com um mock de `SaveNotificationPort`, sem subir banco |
-| **Substituibilidade**      | Trocar PostgreSQL por outro banco = reescrever só os adapters                                     |
-| **Clareza de intenção**    | As interfaces de porta documentam exatamente o que o domínio precisa                              |
-| **Isolamento de mudanças** | Mudar o formato do JSON da API não afeta o domínio                                                |
 
 ### Design Patterns aplicados
 
-| Pattern                     | Onde                      | Propósito                                                                      |
-|-----------------------------|---------------------------|--------------------------------------------------------------------------------|
-| **Strategy**                | `NotificationChannelPort` | Cada canal de entrega é intercambiável. Adicionar WhatsApp = criar nova classe |
-| **Chain of Responsibility** | Pipeline da API Layer     | Autenticação → Validação → Idempotência → Publicação                           |
-| **Observer**                | Consumer RabbitMQ         | Workers reagem a eventos sem acoplamento com quem publicou                     |
-| **Template Method**         | Lógica de retry           | Mesmo fluxo de retry, entrega diferente por canal                              |
+| Pattern | Onde | Propósito |
+|---|---|---|
+| **Strategy** | `NotificationChannelPort` | Cada canal de entrega é intercambiável |
+| **Chain of Responsibility** | API Layer | Auth → Validação → Publicação |
+| **Observer** | RabbitMQ consumer | Workers reagem a eventos sem acoplamento |
+| **Template Method** | Retry logic | Mesmo fluxo, entrega diferente por canal |
 
 ---
 
@@ -222,22 +134,16 @@ um `@Repository` na vida.
 ### Publicação
 
 ```
-POST /notifications  (com X-API-Key e Idempotency-Key)
+POST /notifications
         │
         ▼
-[1] Autenticação — valida api_key, identifica tenant → 401 se inválida
+[1] Autenticação — valida X-API-Key, identifica tenant → 401 se inválida
         │
         ▼
-[2] Validação — template existe? grupo existe? payload ok? → 422 se inválido
+[2] Persiste no PostgreSQL com status PENDING
         │
         ▼
-[3] Idempotência — Idempotency-Key já foi processada? → 200 cached se sim
-        │
-        ▼
-[4] Persiste no PostgreSQL com status PENDING
-        │
-        ▼
-[5] Publica evento no RabbitMQ
+[3] Publica evento no RabbitMQ
         │
         ▼
 202 Accepted {"id": "...", "status": "PENDING"}
@@ -249,71 +155,171 @@ POST /notifications  (com X-API-Key e Idempotency-Key)
 RabbitMQ entrega mensagem ao consumer
         │
         ▼
-[1] Busca Notification no banco pelo notificationId
+[1] Busca Notification no banco
         │
         ▼
-[2] Busca destinatários do tenant
+[2] Resolve destinatários — por grupo ou por tenant
         │
         ▼
-[3] Para cada destinatário, para cada canal preferido:
-        │
-        ├── channel.supports("EMAIL")?  → EmailChannel.deliver()
-        ├── channel.supports("WHATSAPP")? → WhatsAppChannel.deliver()
+[3] Aplica template se templateId presente
         │
         ▼
-[4] Sucesso → salva delivery com status DELIVERED
-    Falha   → salva delivery com status FAILED + errorMessage
-           → RabbitMQ faz retry automático
-           → após N tentativas → mensagem vai para Dead Letter Queue
+[4] Para cada destinatário, para cada canal preferido:
+        ├── Sucesso → status DELIVERED
+        └── Falha   → retry com backoff exponencial
+                         └── após 5 tentativas → DLQ
 ```
 
 ---
 
 ## API
 
-### Enviar notificação
+### Tenants
 
+#### Criar tenant
 ```
-POST /notifications
-X-API-Key: {sua-api-key}
-Idempotency-Key: {uuid-unico}
+POST /tenants
 Content-Type: application/json
 ```
-
 ```json
 {
-  "templateId": null,
-  "groupId": null,
-  "payload": {
-    "subject": "Aviso escolar",
-    "message": "Amanhã não haverá aula."
-  }
+  "name": "Escola Municipal Centro"
+}
+```
+**Resposta `201 Created`**
+```json
+{
+  "id": "uuid",
+  "name": "Escola Municipal Centro",
+  "apiKey": "a3f8c2d1e4b5a6f7c8d9e0f1a2b3c4d5",
+  "status": "ACTIVE"
 }
 ```
 
-**Resposta `202 Accepted`**
+---
 
+### Recipients
+
+#### Criar destinatário
+```
+POST /recipients
+Content-Type: application/json
+```
 ```json
 {
-  "id": "6688e852-717f-4dc9-89c1-95ca72c93539",
+  "tenantId": "uuid-do-tenant",
+  "name": "João da Silva",
+  "email": "joao@escola.com",
+  "phone": "+5541999999999",
+  "channelPreferences": ["EMAIL", "WHATSAPP"]
+}
+```
+
+---
+
+### Groups
+
+#### Criar grupo
+```
+POST /groups
+Content-Type: application/json
+```
+```json
+{
+  "tenantId": "uuid-do-tenant",
+  "name": "Turma 3A",
+  "description": "Pais e responsáveis da turma 3A"
+}
+```
+
+#### Adicionar membro ao grupo
+```
+POST /groups/{groupId}/members?recipientId={recipientId}
+```
+
+---
+
+### Templates
+
+#### Criar template
+```
+POST /templates
+Content-Type: application/json
+```
+```json
+{
+  "tenantId": "uuid-do-tenant",
+  "name": "Aviso Escolar",
+  "channel": "EMAIL",
+  "subject": "Aviso — {{escola}}",
+  "body": "Olá {{responsavel}}, informamos que {{mensagem}}. Atenciosamente, {{escola}}."
+}
+```
+
+---
+
+### Notifications
+
+#### Enviar notificação
+```
+POST /notifications
+X-API-Key: {sua-api-key}
+Content-Type: application/json
+```
+```json
+{
+  "templateId": "uuid-do-template",
+  "groupId": "uuid-do-grupo",
+  "payload": {
+    "escola": "Escola Municipal Centro",
+    "responsavel": "João",
+    "mensagem": "amanhã não haverá aula"
+  }
+}
+```
+**Resposta `202 Accepted`**
+```json
+{
+  "id": "uuid",
   "status": "PENDING"
 }
 ```
 
-**Resposta `401 Unauthorized`** — API key inválida
-
-```json
-{
-  "error": "Invalid API key"
-}
-```
-
-### Consultar status
-
+#### Consultar status
 ```
 GET /notifications/{id}
 X-API-Key: {sua-api-key}
 ```
+
+---
+
+### Admin — DLQ
+
+#### Listar mensagens na DLQ
+```
+GET /admin/dlq/messages
+```
+
+#### Reprocessar mensagens da DLQ
+```
+POST /admin/dlq/reprocess
+```
+
+---
+
+## Retry com Backoff Exponencial
+
+Quando uma entrega falha, o serviço agenda reenvios automáticos com delays crescentes:
+
+```
+Tentativa 1 → falhou → aguarda 2s
+Tentativa 2 → falhou → aguarda 4s
+Tentativa 3 → falhou → aguarda 8s
+Tentativa 4 → falhou → aguarda 16s
+Tentativa 5 → falhou → aguarda 32s → DLQ
+```
+
+Mensagens que esgotam todas as tentativas vão para a Dead Letter Queue e podem ser reprocessadas manualmente via `POST /admin/dlq/reprocess` após o problema ser resolvido.
 
 ---
 
@@ -323,23 +329,39 @@ X-API-Key: {sua-api-key}
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/thiago/notification-service.git
+git clone https://github.com/Thiago-lemes/notification-service.git
 cd notification-service
 
 # 2. Suba a infraestrutura
 docker-compose up -d
 
-# 3. Rode a aplicação
+# 3. Configure as variáveis de ambiente (necessário para WhatsApp)
+# TWILIO_ACCOUNT_SID=seu-account-sid
+# TWILIO_AUTH_TOKEN=seu-auth-token
+
+# 4. Rode a aplicação
 ./mvnw spring-boot:run
 ```
 
 **Serviços disponíveis:**
 
-| Serviço               | URL                                  |
-|-----------------------|--------------------------------------|
-| API                   | http://localhost:8080                |
-| RabbitMQ Management   | http://localhost:15672 (guest/guest) |
-| Mailhog (UI de email) | http://localhost:8025                |
+| Serviço | URL |
+|---|---|
+| API | http://localhost:8080 |
+| RabbitMQ Management | http://localhost:15672 (guest/guest) |
+| Mailhog (UI de email) | http://localhost:8025 |
+
+---
+
+## Testes
+
+O projeto tem **32 testes unitários** cobrindo todos os casos de uso — sem subir Spring, banco ou broker.
+
+```bash
+./mvnw test
+```
+
+Cada caso de uso é testado com MockK — implementações falsas das interfaces permitem testar a lógica de negócio em isolamento total.
 
 ---
 
@@ -349,30 +371,16 @@ docker-compose up -d
 src/main/kotlin/dev/thiago/notification_service/
 ├── domain/
 │   ├── model/
-│   │   ├── Notification.kt
-│   │   ├── NotificationDelivery.kt
-│   │   ├── NotificationEvent.kt
-│   │   ├── Recipient.kt
-│   │   └── Tenant.kt
-│   └── port/
-│       ├── input/
-│       │   ├── SendNotificationUseCase.kt
-│       │   └── SendNotificationRequest.kt
-│       └── output/
-│           ├── SaveNotificationPort.kt
-│           ├── FindNotificationPort.kt
-│           ├── SaveDeliveryPort.kt
-│           ├── FindRecipientsByTenantPort.kt
-│           ├── TenantRepository.kt
-│           └── NotificationChannelPort.kt
+│   ├── port/
+│   │   ├── input/
+│   │   └── output/
+│   └── service/
 ├── application/
 │   └── usecase/
-│       ├── SendNotificationService.kt
-│       └── DeliverNotificationService.kt
 └── infrastructure/
-    ├── persistence/
-    ├── messaging/
     ├── channel/
+    ├── messaging/
+    ├── persistence/
     └── web/
 ```
 
@@ -382,12 +390,13 @@ src/main/kotlin/dev/thiago/notification_service/
 
 Todas as decisões arquiteturais significativas estão documentadas em [`/docs/adr`](./docs/adr).
 
-| #                                                      | Decisão                                | Status |
-|--------------------------------------------------------|----------------------------------------|--------|
-| [ADR-001](./docs/adr/001-hexagonal-architecture.md)    | Arquitetura Hexagonal                  | Aceito |
-| [ADR-002](./docs/adr/002-rabbitmq-async-delivery.md)   | Entrega assíncrona com RabbitMQ        | Aceito |
-| [ADR-003](./docs/adr/003-strategy-pattern-channels.md) | Padrão Strategy para canais de entrega | Aceito |
-| [ADR-004](./docs/adr/004-flyway-migrations.md)         | Migrations com Flyway                  | Aceito |
+| # | Decisão | Status |
+|---|---|---|
+| [ADR-001](./docs/adr/001-hexagonal-architecture.md) | Arquitetura Hexagonal | Aceito |
+| [ADR-002](./docs/adr/002-rabbitmq-async-delivery.md) | Entrega assíncrona com RabbitMQ | Aceito |
+| [ADR-003](./docs/adr/003-strategy-pattern-channels.md) | Padrão Strategy para canais | Aceito |
+| [ADR-004](./docs/adr/004-flyway-migrations.md) | Migrations com Flyway | Aceito |
+| [ADR-005](./docs/adr/005-retry-backoff-exponencial.md) | Retry com Backoff Exponencial | Aceito |
 
 ---
 
