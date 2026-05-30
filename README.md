@@ -6,11 +6,15 @@
 
 ## O que é esse projeto
 
-Notification Service é um microserviço que recebe eventos de notificação de sistemas externos e entrega mensagens de forma confiável em múltiplos canais — Email, WhatsApp e Webhooks — usando arquitetura orientada a eventos.
+Notification Service é um microserviço que recebe eventos de notificação de sistemas externos e entrega mensagens de
+forma confiável em múltiplos canais — Email, WhatsApp e Webhooks — usando arquitetura orientada a eventos.
 
-Qualquer sistema envia um único `POST /notifications`. O serviço cuida de encontrar os destinatários certos, selecionar o canal correto para cada um, e tratar falhas com reenvio automático.
+Qualquer sistema envia um único `POST /notifications`. O serviço cuida de encontrar os destinatários certos, selecionar
+o canal correto para cada um, e tratar falhas com reenvio automático.
 
-**Exemplo real:** uma escola precisa avisar todos os pais que amanhã não haverá aula. O sistema da escola manda um único evento. O Notification Service entrega o aviso via WhatsApp para quem prefere WhatsApp, e via email para quem prefere email — automaticamente.
+**Exemplo real:** uma escola precisa avisar todos os pais que amanhã não haverá aula. O sistema da escola manda um único
+evento. O Notification Service entrega o aviso via WhatsApp para quem prefere WhatsApp, e via email para quem prefere
+email — automaticamente.
 
 ```
 Sistema externo (escola, NGO, e-commerce...)
@@ -42,32 +46,35 @@ Sistema externo (escola, NGO, e-commerce...)
 
 ## Tecnologias
 
-| Camada | Tecnologia |
-|---|---|
-| Linguagem | Kotlin |
-| Framework | Spring Boot 4.x |
-| Message Broker | RabbitMQ |
-| Banco de dados | PostgreSQL |
-| Migrations | Flyway |
-| Email (local) | Mailhog |
-| WhatsApp | Evolution API |
-| Infraestrutura | Docker Compose |
+| Camada         | Tecnologia      |
+|----------------|-----------------|
+| Linguagem      | Kotlin          |
+| Framework      | Spring Boot 4.x |
+| Message Broker | RabbitMQ        |
+| Banco de dados | PostgreSQL      |
+| Migrations     | Flyway          |
+| Email (local)  | Mailhog         |
+| WhatsApp       | Evolution API   |
+| Infraestrutura | Docker Compose  |
 
 ---
 
 ## Arquitetura
 
-Este projeto segue a **Arquitetura Hexagonal**, também conhecida como *Ports and Adapters*. É um padrão arquitetural que mantém as regras de negócio completamente isoladas de detalhes externos como banco de dados, HTTP e mensageria.
+Este projeto segue a **Arquitetura Hexagonal**, também conhecida como *Ports and Adapters*. É um padrão arquitetural que
+mantém as regras de negócio completamente isoladas de detalhes externos como banco de dados, HTTP e mensageria.
 
 ### O problema que ela resolve
 
-Em arquiteturas tradicionais em camadas, o código de negócio frequentemente depende diretamente de frameworks e infraestrutura:
+Em arquiteturas tradicionais em camadas, o código de negócio frequentemente depende diretamente de frameworks e
+infraestrutura:
 
 ```
 Controller → Service → Repository (JPA) → Banco
 ```
 
-Isso cria um problema: se você quiser trocar o banco de dados, reescrever uma lógica de negócio, ou escrever testes unitários sem subir o Spring, vai encontrar resistência. O negócio está acoplado à infraestrutura.
+Isso cria um problema: se você quiser trocar o banco de dados, reescrever uma lógica de negócio, ou escrever testes
+unitários sem subir o Spring, vai encontrar resistência. O negócio está acoplado à infraestrutura.
 
 A Arquitetura Hexagonal inverte essa dependência.
 
@@ -83,13 +90,15 @@ Infraestrutura (JPA, RabbitMQ, HTTP, Email)
       Domínio (regras de negócio)
 ```
 
-O domínio não sabe que existe Spring. Não sabe que existe PostgreSQL. Não sabe que existe RabbitMQ. Ele só conhece suas próprias regras e contratos.
+O domínio não sabe que existe Spring. Não sabe que existe PostgreSQL. Não sabe que existe RabbitMQ. Ele só conhece suas
+próprias regras e contratos.
 
 ### As três camadas
 
 #### 1. Domínio
 
-O coração da aplicação. Contém os modelos de negócio e as interfaces que definem o que o domínio precisa do mundo externo.
+O coração da aplicação. Contém os modelos de negócio e as interfaces que definem o que o domínio precisa do mundo
+externo.
 
 ```
 domain/
@@ -123,7 +132,8 @@ data class Notification(
 
 #### 2. Aplicação
 
-Implementa os casos de uso. Orquestra os modelos de domínio e chama as portas de saída. Não sabe nada sobre HTTP ou JPA — só conhece interfaces.
+Implementa os casos de uso. Orquestra os modelos de domínio e chama as portas de saída. Não sabe nada sobre HTTP ou
+JPA — só conhece interfaces.
 
 ```
 application/
@@ -134,7 +144,8 @@ application/
 
 #### 3. Infraestrutura
 
-O mundo externo. Implementa as portas definidas pelo domínio usando tecnologia real: Spring Data JPA, RabbitMQ, JavaMailSender.
+O mundo externo. Implementa as portas definidas pelo domínio usando tecnologia real: Spring Data JPA, RabbitMQ,
+JavaMailSender.
 
 ```
 infrastructure/
@@ -183,25 +194,26 @@ class SendNotificationService(
 }
 ```
 
-O Spring resolve a implementação em tempo de execução via injeção de dependência. O `SendNotificationService` nunca viu um `@Repository` na vida.
+O Spring resolve a implementação em tempo de execução via injeção de dependência. O `SendNotificationService` nunca viu
+um `@Repository` na vida.
 
 ### Por que isso importa
 
-| Benefício | Como aparece neste projeto |
-|---|---|
-| **Testabilidade** | `SendNotificationService` pode ser testado com um mock de `SaveNotificationPort`, sem subir banco |
-| **Substituibilidade** | Trocar PostgreSQL por outro banco = reescrever só os adapters |
-| **Clareza de intenção** | As interfaces de porta documentam exatamente o que o domínio precisa |
-| **Isolamento de mudanças** | Mudar o formato do JSON da API não afeta o domínio |
+| Benefício                  | Como aparece neste projeto                                                                        |
+|----------------------------|---------------------------------------------------------------------------------------------------|
+| **Testabilidade**          | `SendNotificationService` pode ser testado com um mock de `SaveNotificationPort`, sem subir banco |
+| **Substituibilidade**      | Trocar PostgreSQL por outro banco = reescrever só os adapters                                     |
+| **Clareza de intenção**    | As interfaces de porta documentam exatamente o que o domínio precisa                              |
+| **Isolamento de mudanças** | Mudar o formato do JSON da API não afeta o domínio                                                |
 
 ### Design Patterns aplicados
 
-| Pattern | Onde | Propósito |
-|---|---|---|
-| **Strategy** | `NotificationChannelPort` | Cada canal de entrega é intercambiável. Adicionar WhatsApp = criar nova classe |
-| **Chain of Responsibility** | Pipeline da API Layer | Autenticação → Validação → Idempotência → Publicação |
-| **Observer** | Consumer RabbitMQ | Workers reagem a eventos sem acoplamento com quem publicou |
-| **Template Method** | Lógica de retry | Mesmo fluxo de retry, entrega diferente por canal |
+| Pattern                     | Onde                      | Propósito                                                                      |
+|-----------------------------|---------------------------|--------------------------------------------------------------------------------|
+| **Strategy**                | `NotificationChannelPort` | Cada canal de entrega é intercambiável. Adicionar WhatsApp = criar nova classe |
+| **Chain of Responsibility** | Pipeline da API Layer     | Autenticação → Validação → Idempotência → Publicação                           |
+| **Observer**                | Consumer RabbitMQ         | Workers reagem a eventos sem acoplamento com quem publicou                     |
+| **Template Method**         | Lógica de retry           | Mesmo fluxo de retry, entrega diferente por canal                              |
 
 ---
 
@@ -280,6 +292,7 @@ Content-Type: application/json
 ```
 
 **Resposta `202 Accepted`**
+
 ```json
 {
   "id": "6688e852-717f-4dc9-89c1-95ca72c93539",
@@ -288,6 +301,7 @@ Content-Type: application/json
 ```
 
 **Resposta `401 Unauthorized`** — API key inválida
+
 ```json
 {
   "error": "Invalid API key"
@@ -321,11 +335,11 @@ docker-compose up -d
 
 **Serviços disponíveis:**
 
-| Serviço | URL |
-|---|---|
-| API | http://localhost:8080 |
-| RabbitMQ Management | http://localhost:15672 (guest/guest) |
-| Mailhog (UI de email) | http://localhost:8025 |
+| Serviço               | URL                                  |
+|-----------------------|--------------------------------------|
+| API                   | http://localhost:8080                |
+| RabbitMQ Management   | http://localhost:15672 (guest/guest) |
+| Mailhog (UI de email) | http://localhost:8025                |
 
 ---
 
@@ -368,12 +382,12 @@ src/main/kotlin/dev/thiago/notification_service/
 
 Todas as decisões arquiteturais significativas estão documentadas em [`/docs/adr`](./docs/adr).
 
-| # | Decisão | Status |
-|---|---|---|
-| [ADR-001](./docs/adr/001-hexagonal-architecture.md) | Arquitetura Hexagonal | Aceito |
-| [ADR-002](./docs/adr/002-rabbitmq-async-delivery.md) | Entrega assíncrona com RabbitMQ | Aceito |
+| #                                                      | Decisão                                | Status |
+|--------------------------------------------------------|----------------------------------------|--------|
+| [ADR-001](./docs/adr/001-hexagonal-architecture.md)    | Arquitetura Hexagonal                  | Aceito |
+| [ADR-002](./docs/adr/002-rabbitmq-async-delivery.md)   | Entrega assíncrona com RabbitMQ        | Aceito |
 | [ADR-003](./docs/adr/003-strategy-pattern-channels.md) | Padrão Strategy para canais de entrega | Aceito |
-| [ADR-004](./docs/adr/004-flyway-migrations.md) | Migrations com Flyway | Aceito |
+| [ADR-004](./docs/adr/004-flyway-migrations.md)         | Migrations com Flyway                  | Aceito |
 
 ---
 

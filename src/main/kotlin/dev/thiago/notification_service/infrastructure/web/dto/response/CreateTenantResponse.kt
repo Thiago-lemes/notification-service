@@ -1,6 +1,6 @@
 package dev.thiago.notification_service.infrastructure.web.dto.response
 
-import java.util.UUID
+import java.util.*
 
 data class CreateTenantResponse(
     val id: UUID,

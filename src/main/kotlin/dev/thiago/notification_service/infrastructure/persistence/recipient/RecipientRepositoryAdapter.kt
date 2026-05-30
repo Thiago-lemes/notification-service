@@ -5,7 +5,7 @@ import dev.thiago.notification_service.domain.port.output.FindRecipientsByGroupP
 import dev.thiago.notification_service.domain.port.output.FindRecipientsByTenantPort
 import dev.thiago.notification_service.domain.port.output.SaveRecipientPort
 import org.springframework.stereotype.Component
-import java.util.UUID
+import java.util.*
 
 @Component
 class RecipientRepositoryAdapter(

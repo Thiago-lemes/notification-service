@@ -6,7 +6,7 @@ import dev.thiago.notification_service.domain.port.output.SaveNotificationPort
 import dev.thiago.notification_service.infrastructure.persistence.notification.NotificationJpaEntity
 import dev.thiago.notification_service.infrastructure.persistence.notification.NotificationJpaRepository
 import org.springframework.stereotype.Component
-import java.util.UUID
+import java.util.*
 
 @Component
 class NotificationDeliveryRepositoryAdapter(

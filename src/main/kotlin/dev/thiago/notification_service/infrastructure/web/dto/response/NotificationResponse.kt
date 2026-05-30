@@ -1,7 +1,7 @@
 package dev.thiago.notification_service.infrastructure.web.dto.response
 
 import dev.thiago.notification_service.domain.model.Notification
-import java.util.UUID
+import java.util.*
 
 data class NotificationResponse(
     val id: UUID,

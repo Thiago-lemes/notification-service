@@ -1,6 +1,6 @@
 package dev.thiago.notification_service.domain.model
 
-import java.util.UUID
+import java.util.*
 
 data class NotificationDelivery(
     val id: UUID = UUID.randomUUID(),

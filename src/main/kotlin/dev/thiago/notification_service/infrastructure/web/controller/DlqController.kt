@@ -5,7 +5,10 @@ import org.slf4j.LoggerFactory
 import org.springframework.amqp.core.Message
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/admin/dlq")
@@ -31,10 +34,12 @@ class DlqController(
             val message = rabbitTemplate.receive(RabbitMQConfig.DLQ) ?: return@repeat
             tempMessages.add(message)
 
-            messages.add(mapOf(
-                "notificationId" to extractNotificationId(message),
-                "retryCount" to message.messageProperties.headers["x-retry-count"]
-            ))
+            messages.add(
+                mapOf(
+                    "notificationId" to extractNotificationId(message),
+                    "retryCount" to message.messageProperties.headers["x-retry-count"]
+                )
+            )
         }
 
         // devolve todas para a DLQ
@@ -46,10 +51,12 @@ class DlqController(
             )
         }
 
-        return ResponseEntity.ok(mapOf(
-            "total" to messages.size,
-            "messages" to messages
-        ))
+        return ResponseEntity.ok(
+            mapOf(
+                "total" to messages.size,
+                "messages" to messages
+            )
+        )
     }
 
     @PostMapping("/reprocess")
@@ -75,10 +82,12 @@ class DlqController(
             log.info("Mensagem reprocessada da DLQ: ${extractNotificationId(message)}")
         }
 
-        return ResponseEntity.ok(mapOf(
-            "message" to "Reprocessed $count messages from DLQ",
-            "count" to count
-        ))
+        return ResponseEntity.ok(
+            mapOf(
+                "message" to "Reprocessed $count messages from DLQ",
+                "count" to count
+            )
+        )
     }
 
     private fun extractNotificationId(message: Message): String? {

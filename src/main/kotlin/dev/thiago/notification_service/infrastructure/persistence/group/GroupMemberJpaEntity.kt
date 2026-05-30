@@ -1,8 +1,11 @@
 package dev.thiago.notification_service.infrastructure.persistence.group
 
-import jakarta.persistence.*
+import jakarta.persistence.Embeddable
+import jakarta.persistence.EmbeddedId
+import jakarta.persistence.Entity
+import jakarta.persistence.Table
 import java.io.Serializable
-import java.util.UUID
+import java.util.*
 
 @Embeddable
 data class GroupMemberId(

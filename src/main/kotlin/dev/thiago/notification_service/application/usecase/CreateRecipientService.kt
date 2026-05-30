@@ -6,7 +6,7 @@ import dev.thiago.notification_service.domain.port.input.CreateRecipientUseCase
 import dev.thiago.notification_service.domain.port.output.SaveRecipientPort
 import dev.thiago.notification_service.domain.port.output.TenantRepository
 import org.springframework.stereotype.Service
-import java.util.UUID
+import java.util.*
 
 @Service
 class CreateRecipientService(

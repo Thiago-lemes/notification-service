@@ -5,7 +5,7 @@ import dev.thiago.notification_service.domain.port.input.FindNotificationUseCase
 import dev.thiago.notification_service.domain.port.output.FindNotificationPort
 import dev.thiago.notification_service.domain.port.output.TenantRepository
 import org.springframework.stereotype.Service
-import java.util.UUID
+import java.util.*
 
 @Service
 class FindNotificationService(

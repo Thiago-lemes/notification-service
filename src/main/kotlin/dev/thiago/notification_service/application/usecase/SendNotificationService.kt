@@ -8,7 +8,7 @@ import dev.thiago.notification_service.domain.port.output.SaveNotificationPort
 import dev.thiago.notification_service.domain.port.output.TenantRepository
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
-import java.util.UUID
+import java.util.*
 
 @Service
 class SendNotificationService(

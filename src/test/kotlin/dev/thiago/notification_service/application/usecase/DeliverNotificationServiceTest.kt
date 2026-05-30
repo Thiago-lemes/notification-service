@@ -3,11 +3,7 @@ package dev.thiago.notification_service.application.usecase
 import dev.thiago.notification_service.domain.model.Notification
 import dev.thiago.notification_service.domain.model.NotificationEvent
 import dev.thiago.notification_service.domain.model.Recipient
-import dev.thiago.notification_service.domain.port.output.FindNotificationPort
-import dev.thiago.notification_service.domain.port.output.FindRecipientsByGroupPort
-import dev.thiago.notification_service.domain.port.output.FindRecipientsByTenantPort
-import dev.thiago.notification_service.domain.port.output.NotificationChannelPort
-import dev.thiago.notification_service.domain.port.output.SaveDeliveryPort
+import dev.thiago.notification_service.domain.port.output.*
 import io.mockk.every
 import io.mockk.justRun
 import io.mockk.mockk

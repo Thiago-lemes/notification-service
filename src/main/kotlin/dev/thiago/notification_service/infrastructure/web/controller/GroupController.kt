@@ -3,13 +3,13 @@ package dev.thiago.notification_service.infrastructure.web.controller
 import dev.thiago.notification_service.domain.port.input.AddGroupMemberUseCase
 import dev.thiago.notification_service.domain.port.input.CreateGroupRequest
 import dev.thiago.notification_service.domain.port.input.CreateGroupUseCase
-import dev.thiago.notification_service.infrastructure.web.dto.request.CreateGroupRequest as CreateGroupRequestDto
 import dev.thiago.notification_service.infrastructure.web.dto.response.GroupResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import java.util.UUID
+import java.util.*
+import dev.thiago.notification_service.infrastructure.web.dto.request.CreateGroupRequest as CreateGroupRequestDto
 
 @RestController
 @RequestMapping("/groups")

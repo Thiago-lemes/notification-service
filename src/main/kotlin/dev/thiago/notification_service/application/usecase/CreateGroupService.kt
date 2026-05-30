@@ -6,7 +6,7 @@ import dev.thiago.notification_service.domain.port.input.CreateGroupUseCase
 import dev.thiago.notification_service.domain.port.output.SaveGroupPort
 import dev.thiago.notification_service.domain.port.output.TenantRepository
 import org.springframework.stereotype.Service
-import java.util.UUID
+import java.util.*
 
 @Service
 class CreateGroupService(

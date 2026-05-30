@@ -1,7 +1,7 @@
 package dev.thiago.notification_service.domain.port.output
 
 import dev.thiago.notification_service.domain.model.Tenant
-import java.util.UUID
+import java.util.*
 
 interface TenantRepository {
     fun findByApiKey(apiKey: String): Tenant?

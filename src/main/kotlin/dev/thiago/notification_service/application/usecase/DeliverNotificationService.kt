@@ -4,15 +4,17 @@ import dev.thiago.notification_service.domain.model.NotificationDelivery
 import dev.thiago.notification_service.domain.model.NotificationEvent
 import dev.thiago.notification_service.domain.model.Recipient
 import dev.thiago.notification_service.domain.port.output.*
+import dev.thiago.notification_service.domain.service.TemplateRenderer
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.UUID
+import java.util.*
 
 @Service
 class DeliverNotificationService(
     private val findNotification: FindNotificationPort,
     private val findRecipients: FindRecipientsByTenantPort,
     private val findRecipientsByGroup: FindRecipientsByGroupPort,
+    private val findTemplate: FindTemplatePort,
     private val saveDelivery: SaveDeliveryPort,
     private val channels: List<NotificationChannelPort>
 ) {
@@ -20,9 +22,11 @@ class DeliverNotificationService(
     private val log = LoggerFactory.getLogger(DeliverNotificationService::class.java)
 
     fun deliver(event: NotificationEvent) {
+        // 1. busca a notificação
         val notification = findNotification.findById(event.notificationId)
             ?: throw IllegalArgumentException("Notification ${event.notificationId} not found")
 
+        // 2. resolve os destinatários — por grupo ou por tenant
         val recipients = resolveRecipients(notification.groupId, notification.tenantId)
 
         if (recipients.isEmpty()) {
@@ -30,15 +34,37 @@ class DeliverNotificationService(
             return
         }
 
-        var hasFailure = false
+        // 3. busca o template se existir
+        val template = notification.templateId?.let {
+            findTemplate.findById(it)
+        }
 
+        // 4. para cada destinatário, para cada canal preferido
         recipients.forEach { recipient ->
-            recipient.channelPreferences.forEach { channelName ->
+            val preferredChannels = if (template != null) {
+                // se tem template, entrega só no canal do template
+                recipient.channelPreferences.filter { it == template.channel }
+            } else {
+                recipient.channelPreferences
+            }
+
+            preferredChannels.forEach { channelName ->
                 val channel = channels.find { it.supports(channelName) }
 
                 if (channel == null) {
                     log.warn("Nenhum canal encontrado para $channelName")
                     return@forEach
+                }
+
+                // 5. aplica o template se existir, senão usa o payload direto
+                val payload = if (template != null) {
+                    val rendered = TemplateRenderer.render(template, notification.payload)
+                    mapOf(
+                        "subject" to (rendered.subject ?: ""),
+                        "message" to rendered.body
+                    )
+                } else {
+                    notification.payload
                 }
 
                 val delivery = NotificationDelivery(
@@ -51,25 +77,19 @@ class DeliverNotificationService(
                 val saved = saveDelivery.save(delivery)
 
                 try {
-                    channel.deliver(recipient, notification.payload)
+                    channel.deliver(recipient, payload)
                     saveDelivery.save(saved.copy(status = "DELIVERED", attemptCount = 1))
                     log.info("Entregue via $channelName para ${recipient.name}")
                 } catch (e: Exception) {
-                    saveDelivery.save(
-                        saved.copy(
-                            status = "FAILED",
-                            attemptCount = 1,
-                            errorMessage = e.message
-                        )
-                    )
+                    saveDelivery.save(saved.copy(
+                        status = "FAILED",
+                        attemptCount = 1,
+                        errorMessage = e.message
+                    ))
                     log.error("Falha ao entregar via $channelName para ${recipient.name}: ${e.message}")
-                    hasFailure = true
+                    throw RuntimeException("One or more deliveries failed — triggering retry")
                 }
             }
-        }
-
-        if (hasFailure) {
-            throw RuntimeException("One or more deliveries failed — triggering retry")
         }
     }
 

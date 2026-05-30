@@ -36,12 +36,16 @@ class RabbitMQConfig {
 
     @Bean
     fun retry2sQueue(): Queue = buildRetryQueue("notifications.retry.2s", 2000)
+
     @Bean
     fun retry4sQueue(): Queue = buildRetryQueue("notifications.retry.4s", 4000)
+
     @Bean
     fun retry8sQueue(): Queue = buildRetryQueue("notifications.retry.8s", 8000)
+
     @Bean
     fun retry16sQueue(): Queue = buildRetryQueue("notifications.retry.16s", 16000)
+
     @Bean
     fun retry32sQueue(): Queue = buildRetryQueue("notifications.retry.32s", 32000)
 

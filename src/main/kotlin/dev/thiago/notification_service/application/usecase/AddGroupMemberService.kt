@@ -5,7 +5,7 @@ import dev.thiago.notification_service.domain.port.output.AddGroupMemberPort
 import dev.thiago.notification_service.domain.port.output.FindGroupPort
 import dev.thiago.notification_service.domain.port.output.FindRecipientsByTenantPort
 import org.springframework.stereotype.Service
-import java.util.UUID
+import java.util.*
 
 @Service
 class AddGroupMemberService(

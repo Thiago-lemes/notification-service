@@ -4,7 +4,7 @@ import dev.thiago.notification_service.domain.model.Tenant
 import dev.thiago.notification_service.domain.port.input.CreateTenantUseCase
 import dev.thiago.notification_service.domain.port.output.SaveTenantPort
 import org.springframework.stereotype.Service
-import java.util.UUID
+import java.util.*
 
 @Service
 class CreateTenantService(

@@ -5,7 +5,7 @@ import dev.thiago.notification_service.domain.port.output.AddGroupMemberPort
 import dev.thiago.notification_service.domain.port.output.FindGroupPort
 import dev.thiago.notification_service.domain.port.output.SaveGroupPort
 import org.springframework.stereotype.Component
-import java.util.UUID
+import java.util.*
 
 @Component
 class GroupRepositoryAdapter(
