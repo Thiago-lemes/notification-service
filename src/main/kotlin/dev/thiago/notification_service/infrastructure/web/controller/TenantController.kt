@@ -22,14 +22,13 @@ class TenantController(
         @Valid @RequestBody request: CreateTenantRequest
     ): ResponseEntity<CreateTenantResponse> {
         val tenant = createTenant.create(request.name)
-
-        val response = CreateTenantResponse(
-            id = tenant.id,
-            name = tenant.name,
-            apiKey = tenant.apiKey,
-            status = tenant.status
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            CreateTenantResponse(
+                id = tenant.id,
+                name = tenant.name,
+                apiKey = tenant.apiKey,
+                status = tenant.status
+            )
         )
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 }

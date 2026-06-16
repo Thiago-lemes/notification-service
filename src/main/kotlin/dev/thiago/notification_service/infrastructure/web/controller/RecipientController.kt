@@ -21,20 +21,16 @@ class RecipientController(
     @PostMapping
     fun create(
         @Valid @RequestBody request: CreateRecipientRequestDto
-    ): ResponseEntity<Any> {
-        return try {
-            val recipient = createRecipient.create(
-                CreateRecipientRequest(
-                    tenantId = request.tenantId,
-                    name = request.name,
-                    email = request.email,
-                    phone = request.phone,
-                    channelPreferences = request.channelPreferences
-                )
+    ): ResponseEntity<RecipientResponse> {
+        val recipient = createRecipient.create(
+            CreateRecipientRequest(
+                tenantId = request.tenantId,
+                name = request.name,
+                email = request.email,
+                phone = request.phone,
+                channelPreferences = request.channelPreferences
             )
-            ResponseEntity.status(HttpStatus.CREATED).body(RecipientResponse.from(recipient))
-        } catch (e: IllegalArgumentException) {
-            ResponseEntity.badRequest().body(mapOf("error" to e.message))
-        }
+        )
+        return ResponseEntity.status(HttpStatus.CREATED).body(RecipientResponse.from(recipient))
     }
 }

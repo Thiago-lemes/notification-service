@@ -5,7 +5,6 @@ import dev.thiago.notification_service.domain.port.input.SendNotificationRequest
 import dev.thiago.notification_service.domain.port.input.SendNotificationUseCase
 import dev.thiago.notification_service.infrastructure.web.dto.request.NotificationRequest
 import dev.thiago.notification_service.infrastructure.web.dto.response.NotificationResponse
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.util.*
@@ -22,19 +21,16 @@ class NotificationController(
         @RequestHeader("X-API-Key") apiKey: String,
         @RequestBody request: NotificationRequest
     ): ResponseEntity<Any> {
-        return try {
-            val notification = sendNotification.send(
-                apiKey = apiKey,
-                request = SendNotificationRequest(
-                    templateId = request.templateId,
-                    groupId = request.groupId,
-                    payload = request.payload
-                )
+        val notification = sendNotification.send(
+            apiKey = apiKey,
+            request = SendNotificationRequest(
+                templateId = request.templateId,
+                groupId = request.groupId,
+                payload = request.payload
             )
-            ResponseEntity.accepted().body(mapOf("id" to notification.id, "status" to notification.status))
-        } catch (e: IllegalArgumentException) {
-            ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("error" to e.message))
-        }
+        )
+        return ResponseEntity.accepted()
+            .body(mapOf("id" to notification.id, "status" to notification.status))
     }
 
     @GetMapping("/{id}")
@@ -42,16 +38,8 @@ class NotificationController(
         @RequestHeader("X-API-Key") apiKey: String,
         @PathVariable id: UUID
     ): ResponseEntity<Any> {
-        return try {
-            val notification = findNotification.find(apiKey = apiKey, notificationId = id)
-            ResponseEntity.ok(NotificationResponse.from(notification))
-        } catch (e: IllegalArgumentException) {
-            ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("error" to e.message))
-        } catch (e: NoSuchElementException) {
-            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
-        } catch (e: IllegalAccessException) {
-            ResponseEntity.status(HttpStatus.FORBIDDEN).body(mapOf("error" to e.message))
-        }
+        val notification = findNotification.find(apiKey = apiKey, notificationId = id)
+        return ResponseEntity.ok(NotificationResponse.from(notification))
     }
 }
 
