@@ -5,6 +5,8 @@ import dev.thiago.notification_service.domain.port.output.FindNotificationPort
 import dev.thiago.notification_service.domain.port.output.SaveNotificationPort
 import dev.thiago.notification_service.infrastructure.persistence.notification.NotificationJpaEntity
 import dev.thiago.notification_service.infrastructure.persistence.notification.NotificationJpaRepository
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Component
 import java.util.*
 
@@ -16,6 +18,10 @@ class NotificationDeliveryRepositoryAdapter(
     override fun save(notification: Notification): Notification {
         jpaRepository.save(notification.toEntity())
         return notification
+    }
+
+    override fun findByTenantId(tenantId: UUID, pageable: Pageable): Page<Notification> {
+        return jpaRepository.findByTenantId(tenantId, pageable).map { it.toDomain() }
     }
 
     override fun findById(id: UUID): Notification? {

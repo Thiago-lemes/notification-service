@@ -1,9 +1,11 @@
 package dev.thiago.notification_service.infrastructure.web.controller
 
 import dev.thiago.notification_service.domain.port.input.FindNotificationUseCase
+import dev.thiago.notification_service.domain.port.input.ListNotificationsUseCase
 import dev.thiago.notification_service.domain.port.input.SendNotificationRequest
 import dev.thiago.notification_service.domain.port.input.SendNotificationUseCase
 import dev.thiago.notification_service.infrastructure.web.dto.request.NotificationRequest
+import dev.thiago.notification_service.infrastructure.web.dto.response.NotificationPageResponse
 import dev.thiago.notification_service.infrastructure.web.dto.response.NotificationResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -13,7 +15,8 @@ import java.util.*
 @RequestMapping("/notifications")
 class NotificationController(
     private val sendNotification: SendNotificationUseCase,
-    private val findNotification: FindNotificationUseCase
+    private val findNotification: FindNotificationUseCase,
+    private val listNotifications: ListNotificationsUseCase
 ) {
 
     @PostMapping
@@ -40,6 +43,16 @@ class NotificationController(
     ): ResponseEntity<Any> {
         val notification = findNotification.find(apiKey = apiKey, notificationId = id)
         return ResponseEntity.ok(NotificationResponse.from(notification))
+    }
+
+    @GetMapping
+    fun list(
+        @RequestHeader("X-API-Key") apiKey: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int
+    ): ResponseEntity<NotificationPageResponse> {
+        val result = listNotifications.list(apiKey, page, size)
+        return ResponseEntity.ok(NotificationPageResponse.from(result))
     }
 }
 
