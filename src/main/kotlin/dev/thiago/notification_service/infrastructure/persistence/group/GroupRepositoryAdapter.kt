@@ -3,6 +3,7 @@ package dev.thiago.notification_service.infrastructure.persistence.group
 import dev.thiago.notification_service.domain.model.RecipientGroup
 import dev.thiago.notification_service.domain.port.output.AddGroupMemberPort
 import dev.thiago.notification_service.domain.port.output.FindGroupPort
+import dev.thiago.notification_service.domain.port.output.FindGroupsByTenantPort
 import dev.thiago.notification_service.domain.port.output.SaveGroupPort
 import org.springframework.stereotype.Component
 import java.util.*
@@ -10,8 +11,8 @@ import java.util.*
 @Component
 class GroupRepositoryAdapter(
     private val groupJpaRepository: RecipientGroupJpaRepository,
-    private val groupMemberJpaRepository: GroupMemberJpaRepository
-) : SaveGroupPort, FindGroupPort, AddGroupMemberPort {
+    private val groupMemberJpaRepository: GroupMemberJpaRepository,
+) : SaveGroupPort, FindGroupPort, AddGroupMemberPort, FindGroupsByTenantPort {
 
     override fun save(group: RecipientGroup): RecipientGroup {
         groupJpaRepository.save(group.toEntity())
@@ -27,6 +28,10 @@ class GroupRepositoryAdapter(
             id = GroupMemberId(groupId = groupId, recipientId = recipientId)
         )
         groupMemberJpaRepository.save(member)
+    }
+
+    override fun findByTenantId(tenantId: UUID): List<RecipientGroup> {
+        return groupJpaRepository.findByTenantId(tenantId).map { it.toDomain() }
     }
 
     private fun RecipientGroup.toEntity() = RecipientGroupJpaEntity(

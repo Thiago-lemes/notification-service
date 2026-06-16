@@ -20,6 +20,10 @@ class TemplateRepositoryAdapter(
         return jpaRepository.findById(id).orElse(null)?.toDomain()
     }
 
+    override fun findByTenantId(tenantId: UUID): List<Template> {
+        return jpaRepository.findByTenantId(tenantId).map { it.toDomain() }
+    }
+
     private fun Template.toEntity() = TemplateJpaEntity(
         id = id,
         tenantId = tenantId,
