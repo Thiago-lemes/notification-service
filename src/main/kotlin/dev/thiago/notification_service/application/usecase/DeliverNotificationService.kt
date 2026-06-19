@@ -56,9 +56,13 @@ class DeliverNotificationService(
                     return@forEach
                 }
 
-                // 5. aplica o template se existir, senão usa o payload direto
                 val payload = if (template != null) {
-                    val rendered = TemplateRenderer.render(template, notification.payload)
+                    val enrichedPayload = notification.payload + mapOf(
+                        "nome" to recipient.name,
+                        "email" to (recipient.email ?: ""),
+                        "phone" to (recipient.phone ?: "")
+                    )
+                    val rendered = TemplateRenderer.render(template, enrichedPayload)
                     mapOf(
                         "subject" to (rendered.subject ?: ""),
                         "message" to rendered.body
@@ -81,11 +85,13 @@ class DeliverNotificationService(
                     saveDelivery.save(saved.copy(status = "DELIVERED", attemptCount = 1))
                     log.info("Entregue via $channelName para ${recipient.name}")
                 } catch (e: Exception) {
-                    saveDelivery.save(saved.copy(
-                        status = "FAILED",
-                        attemptCount = 1,
-                        errorMessage = e.message
-                    ))
+                    saveDelivery.save(
+                        saved.copy(
+                            status = "FAILED",
+                            attemptCount = 1,
+                            errorMessage = e.message
+                        )
+                    )
                     log.error("Falha ao entregar via $channelName para ${recipient.name}: ${e.message}")
                     throw RuntimeException("One or more deliveries failed — triggering retry")
                 }
