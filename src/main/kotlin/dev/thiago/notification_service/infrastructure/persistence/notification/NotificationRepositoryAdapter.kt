@@ -3,11 +3,11 @@ package dev.thiago.notification_service.infrastructure.persistence.notification
 import dev.thiago.notification_service.domain.model.Notification
 import dev.thiago.notification_service.domain.port.output.FindNotificationPort
 import dev.thiago.notification_service.domain.port.output.SaveNotificationPort
+import org.springframework.context.annotation.Primary
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
-import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Component
-import java.util.UUID
+import java.util.*
 
 @Primary
 @Component
