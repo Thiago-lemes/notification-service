@@ -31,6 +31,7 @@ class RecipientRepositoryAdapter(
         name = name,
         email = email,
         phone = phone,
+        webhookUrl = webhookUrl,
         channelPreferences = channelPreferences
     )
 
@@ -40,6 +41,7 @@ class RecipientRepositoryAdapter(
         name = name,
         email = email,
         phone = phone,
+        webhookUrl = webhookUrl,
         channelPreferences = channelPreferences
     )
 }

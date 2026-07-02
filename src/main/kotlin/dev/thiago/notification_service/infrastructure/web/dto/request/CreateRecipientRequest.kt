@@ -12,7 +12,6 @@ data class CreateRecipientRequest(
 
     val email: String?,
     val phone: String?,
-
-    @field:NotEmpty(message = "channelPreferences must have at least one value")
-    val channelPreferences: List<String>
+    val webhookUrl: String?,
+    @field:NotEmpty val channelPreferences: List<String>
 )

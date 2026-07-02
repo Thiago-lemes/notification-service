@@ -18,7 +18,7 @@ class CreateRecipientService(
         val tenant = tenantRepository.findById(UUID.fromString(request.tenantId))
             ?: throw IllegalArgumentException("Tenant ${request.tenantId} not found")
 
-        require(request.email != null || request.phone != null) {
+        require(request.email != null || request.phone != null || request.webhookUrl != null) {
             "Recipient must have at least one contact — email or phone"
         }
 
@@ -32,7 +32,8 @@ class CreateRecipientService(
             name = request.name,
             email = request.email,
             phone = request.phone,
-            channelPreferences = request.channelPreferences
+            channelPreferences = request.channelPreferences,
+            webhookUrl = request.webhookUrl
         )
 
         return saveRecipient.save(recipient)

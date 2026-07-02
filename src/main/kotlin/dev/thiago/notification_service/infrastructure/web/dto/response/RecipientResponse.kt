@@ -9,6 +9,7 @@ data class RecipientResponse(
     val name: String,
     val email: String?,
     val phone: String?,
+    val webhookUrl: String?,
     val channelPreferences: List<String>
 ) {
     companion object {
@@ -18,6 +19,7 @@ data class RecipientResponse(
             name = recipient.name,
             email = recipient.email,
             phone = recipient.phone,
+            webhookUrl = recipient.webhookUrl,
             channelPreferences = recipient.channelPreferences
         )
     }

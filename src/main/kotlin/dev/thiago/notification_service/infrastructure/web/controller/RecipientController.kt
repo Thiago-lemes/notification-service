@@ -39,6 +39,7 @@ class RecipientController(
                 name = request.name,
                 email = request.email,
                 phone = request.phone,
+                webhookUrl = request.webhookUrl,
                 channelPreferences = request.channelPreferences
             )
         )

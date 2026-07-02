@@ -25,6 +25,9 @@ class RecipientJpaEntity(
 
     val phone: String?,
 
+    @Column(name = "webhook_url")
+    val webhookUrl: String? = null,
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "channel_preferences", columnDefinition = "jsonb")
     val channelPreferences: List<String> = listOf("EMAIL"),

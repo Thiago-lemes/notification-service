@@ -8,5 +8,6 @@ data class Recipient(
     val name: String,
     val email: String?,
     val phone: String?,
+    val webhookUrl: String?,
     val channelPreferences: List<String>
 )

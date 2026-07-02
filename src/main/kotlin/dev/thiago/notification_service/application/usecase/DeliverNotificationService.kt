@@ -41,13 +41,7 @@ class DeliverNotificationService(
 
         // 4. para cada destinatário, para cada canal preferido
         recipients.forEach { recipient ->
-            val preferredChannels = if (template != null) {
-                // se tem template, entrega só no canal do template
-                recipient.channelPreferences.filter { it == template.channel }
-            } else {
-                recipient.channelPreferences
-            }
-
+            val preferredChannels = recipient.channelPreferences
             preferredChannels.forEach { channelName ->
                 val channel = channels.find { it.supports(channelName) }
 
@@ -56,7 +50,7 @@ class DeliverNotificationService(
                     return@forEach
                 }
 
-                val payload = if (template != null) {
+                val payload = if (template != null && channelName != "WEBHOOK") {
                     val enrichedPayload = notification.payload + mapOf(
                         "nome" to recipient.name,
                         "email" to (recipient.email ?: ""),
