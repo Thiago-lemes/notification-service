@@ -64,7 +64,11 @@ class CreateRecipientServiceTest {
 
         // ACT + ASSERT
         val exception = assertThrows<IllegalArgumentException> {
-            service.create(buildRequest(tenantId = tenant.id.toString(), email = null, phone = null))
+            service.create(
+                buildRequest(
+                    tenantId = tenant.id.toString(), email = null, phone = null, webhookUrl = null
+                )
+            )
         }
 
         assertEquals("Recipient must have at least one contact — email or phone", exception.message)
@@ -119,12 +123,14 @@ class CreateRecipientServiceTest {
         tenantId: String = UUID.randomUUID().toString(),
         email: String? = "joao@cantina.com",
         phone: String? = null,
+        webhookUrl: String? = null,
         channelPreferences: List<String> = listOf("EMAIL")
     ) = CreateRecipientRequest(
         tenantId = tenantId,
         name = "João da Silva",
         email = email,
         phone = phone,
-        channelPreferences = channelPreferences
+        channelPreferences = channelPreferences,
+        webhookUrl = webhookUrl
     )
 }

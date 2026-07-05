@@ -128,6 +128,7 @@ class AddGroupMemberServiceTest {
         name = "João da Silva",
         email = "joao@cantina.com",
         phone = null,
-        channelPreferences = listOf("EMAIL")
+        channelPreferences = listOf("EMAIL"),
+        webhookUrl = "https://webhook.site/joao"
     )
 }

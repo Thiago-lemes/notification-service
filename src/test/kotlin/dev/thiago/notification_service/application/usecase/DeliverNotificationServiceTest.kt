@@ -27,7 +27,8 @@ class DeliverNotificationServiceTest {
         findRecipients = findRecipients,
         findRecipientsByGroup = findRecipientsByGroup,
         saveDelivery = saveDelivery,
-        channels = listOf(emailChannel, whatsappChannel)
+        channels = listOf(emailChannel, whatsappChannel),
+        findTemplate = mockk<FindTemplatePort>()
     )
 
     @Test
@@ -239,7 +240,8 @@ class DeliverNotificationServiceTest {
         name = "Maria Silva",
         email = "maria@escola.com",
         phone = null,
-        channelPreferences = channelPreferences
+        channelPreferences = channelPreferences,
+        webhookUrl = "https://webhook.site/maria"
     )
 
     private fun buildEvent(notification: Notification) = NotificationEvent(
