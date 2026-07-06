@@ -5,8 +5,10 @@ import dev.thiago.notification_service.domain.model.NotificationEvent
 import dev.thiago.notification_service.domain.model.Recipient
 import dev.thiago.notification_service.domain.port.output.*
 import dev.thiago.notification_service.domain.service.TemplateRenderer
+import dev.thiago.notification_service.infrastructure.metrics.NotificationMetrics
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import sun.security.krb5.Config.duration
 import java.util.*
 
 @Service
@@ -16,7 +18,8 @@ class DeliverNotificationService(
     private val findRecipientsByGroup: FindRecipientsByGroupPort,
     private val findTemplate: FindTemplatePort,
     private val saveDelivery: SaveDeliveryPort,
-    private val channels: List<NotificationChannelPort>
+    private val channels: List<NotificationChannelPort>,
+    private val metrics: NotificationMetrics
 ) {
 
     private val log = LoggerFactory.getLogger(DeliverNotificationService::class.java)
@@ -75,8 +78,13 @@ class DeliverNotificationService(
                 val saved = saveDelivery.save(delivery)
 
                 try {
+                    val start = System.currentTimeMillis()
+
                     channel.deliver(recipient, payload)
                     saveDelivery.save(saved.copy(status = "DELIVERED", attemptCount = 1))
+                    metrics.incrementDelivered(channelName)
+                    val duration = System.currentTimeMillis() - start
+                    metrics.recordDeliveryTime(channelName, duration)
                     log.info("Entregue via $channelName para ${recipient.name}")
                 } catch (e: Exception) {
                     saveDelivery.save(
@@ -86,6 +94,7 @@ class DeliverNotificationService(
                             errorMessage = e.message
                         )
                     )
+                    metrics.incrementFailed(channelName)
                     log.error("Falha ao entregar via $channelName para ${recipient.name}: ${e.message}")
                     throw RuntimeException("One or more deliveries failed — triggering retry")
                 }

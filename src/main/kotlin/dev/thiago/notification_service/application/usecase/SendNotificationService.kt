@@ -6,6 +6,7 @@ import dev.thiago.notification_service.domain.port.input.SendNotificationUseCase
 import dev.thiago.notification_service.domain.port.output.NotificationPublisherPort
 import dev.thiago.notification_service.domain.port.output.SaveNotificationPort
 import dev.thiago.notification_service.domain.port.output.TenantRepository
+import dev.thiago.notification_service.infrastructure.metrics.NotificationMetrics
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import java.util.*
@@ -15,7 +16,8 @@ class SendNotificationService(
     private val tenantRepository: TenantRepository,
     @Qualifier("notificationRepositoryAdapter")
     private val saveNotification: SaveNotificationPort,
-    private val publishNotification: NotificationPublisherPort
+    private val publishNotification: NotificationPublisherPort,
+    private val metrics: NotificationMetrics
 
 ) : SendNotificationUseCase {
 
@@ -32,6 +34,7 @@ class SendNotificationService(
 
         val saved = saveNotification.save(notification)
         publishNotification.publish(saved)
+        metrics.incrementSent()
         return saved
 
     }

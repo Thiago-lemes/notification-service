@@ -2,6 +2,7 @@ package dev.thiago.notification_service.infrastructure.messaging
 
 import dev.thiago.notification_service.application.usecase.DeliverNotificationService
 import dev.thiago.notification_service.domain.model.NotificationEvent
+import dev.thiago.notification_service.infrastructure.metrics.NotificationMetrics
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.core.Message
 import org.springframework.amqp.core.MessageProperties
@@ -12,7 +13,8 @@ import org.springframework.stereotype.Component
 @Component
 class NotificationConsumer(
     private val deliverNotification: DeliverNotificationService,
-    private val rabbitTemplate: RabbitTemplate
+    private val rabbitTemplate: RabbitTemplate,
+    private val metrics: NotificationMetrics
 ) {
 
     private val log = LoggerFactory.getLogger(NotificationConsumer::class.java)
@@ -36,6 +38,7 @@ class NotificationConsumer(
             deliverNotification.deliver(event)
         } catch (e: Exception) {
             log.error("Falha ao processar mensagem: ${e.message}")
+            metrics.incrementDlq()
             handleFailure(message, event, retryCount)
         }
     }
@@ -49,6 +52,7 @@ class NotificationConsumer(
 
         val routingKey = retryQueues[retryCount]
         log.warn("Agendando retry ${retryCount + 1} para ${event.notificationId} via $routingKey")
+        metrics.incrementRetry()
 
         val properties = MessageProperties().apply {
             headers.putAll(message.messageProperties.headers)
